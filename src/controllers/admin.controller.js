@@ -1,7 +1,8 @@
 import Admin from '../models/admin.model.js';
 import { adminValidator } from '../utils/admin.validation.js';
 import { catchError } from '../utils/error-response.js';
-import * as bcrypt from 'bcrypt';
+import { decode, encode } from '../utils/bcrypt-encrypt.js';
+import jwt from 'jsonwebtoken';
 
 export class AdminController {
     async createAdmin(req, res) {
@@ -11,7 +12,7 @@ export class AdminController {
                 throw new Error(`Admin ma'lumotlari xato kiritildi: ${error}`);
             }
             const { username, password, role } = value;
-            const hashedPassword = await bcrypt.hash(password, 7);
+            const hashedPassword = await decode(password, 7);
             const newAdmin = await Admin.create({
                 username, hashedPassword, role
             });
@@ -92,17 +93,23 @@ export class AdminController {
         try {
             const { username, password } = req.body;
             const admin = await Admin.findOne({ username });
-            if (!admin){
+            if (!admin) {
                 throw new Error('Username not found');
             }
-            const matchPassword = await bcrypt.compare(password, admin.hashedPassword);
-            if (!matchPassword){
+            const matchPassword = await encode(password, admin.hashedPassword);
+            if (!matchPassword) {
                 throw new Error('Invalid password');
             }
+            const payload = { id: admin._id, role: admin.role };
+            const token = jwt.sign(payload, process.env.ACCESS_TOKEN_KEY, {
+                expiresIn: process.env.ACCESS_TOKEN_TIME
+            });
             return res.status(200).json({
                 statusCode: 200,
                 message: 'success',
-                data: {}
+                data: {
+                    token
+                }
             });
         } catch (error) {
             catchError(error, res);
