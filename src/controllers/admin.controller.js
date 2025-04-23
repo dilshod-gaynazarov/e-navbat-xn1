@@ -2,90 +2,95 @@ import Admin from '../models/admin.model.js';
 import { adminValidator } from '../utils/admin.validation.js';
 import { catchError } from '../utils/error-response.js';
 import { decode, encode } from '../utils/bcrypt-encrypt.js';
+import { successRes } from '../utils/success-response.js';
 import jwt from 'jsonwebtoken';
 
 export class AdminController {
+    async createSuperAdmin(req, res) {
+        try {
+            const checkSuperAdmin = await Admin.findOne({ role: 'superadmin' });
+            if (checkSuperAdmin) {
+                catchError(409, 'Super admin already exist', res);
+            };
+            const { error, value } = adminValidator(req.body);
+            if (error) {
+                catchError(406, error, res);
+            }
+            const { username, password } = value;
+            const hashedPassword = await decode(password, 7);
+            const superadmin = await Admin.create({
+                username, hashedPassword, role: 'superadmin'
+            });
+            successRes(res, 201, superadmin);
+        } catch (error) {
+            catchError(500, error.message, res);
+        }
+    }
+
     async createAdmin(req, res) {
         try {
             const { error, value } = adminValidator(req.body);
             if (error) {
-                throw new Error(`Admin ma'lumotlari xato kiritildi: ${error}`);
+                catchError(406, error, res);
             }
-            const { username, password, role } = value;
+            const { username, password } = value;
             const hashedPassword = await decode(password, 7);
-            const newAdmin = await Admin.create({
-                username, hashedPassword, role
+            const admin = await Admin.create({
+                username, hashedPassword, role: 'admin'
             });
-            return res.status(201).json({
-                statusCode: 201,
-                message: 'success',
-                data: newAdmin
-            });
+            successRes(res, 201, admin);
         } catch (error) {
-            catchError(error, res);
+            catchError(500, error.message, res);
         }
     }
 
     async getAllAdmins(_, res) {
         try {
             const admins = await Admin.find();
-            return res.status(200).json({
-                statusCode: 200,
-                message: 'success',
-                data: admins
-            })
+            successRes(res, 200, admins);
         } catch (error) {
-            catchError(error, res);
+            catchError(500, error.message, res);
         }
     }
 
     async getAdminById(req, res) {
         try {
-            const admin = await Admin.findById(req.params.id);
+            const id = req.params.id;
+            const admin = await Admin.findById(id);
             if (!admin) {
-                throw new Error('Admin not found');
+                catchError(404, `Admin not found by ID ${id}`, res);
             }
-            return res.status(200).json({
-                statusCode: 200,
-                message: 'success',
-                data: admin
-            });
+            successRes(res, 200, admin);
         } catch (error) {
-            catchError(error, res);
+            catchError(500, error.message, res);
         }
     }
 
     async updateAdminById(req, res) {
         try {
-            const admin = await Admin.findById(req.params.id);
+            const id = req.params.id;
+            const admin = await Admin.findById(id);
             if (!admin) {
-                throw new Error('Admin not found');
+                catchError(404, `Admin not found by ID ${id}`, res);
             }
-            const updatedAdmin = await Admin.findByIdAndUpdate(req.params.id, req.body, { new: true });
-            return res.status(200).json({
-                statusCode: 200,
-                message: 'success',
-                data: updatedAdmin
-            });
+            const updatedAdmin = await Admin.findByIdAndUpdate(id, req.body, { new: true });
+            successRes(res, 200, updatedAdmin);
         } catch (error) {
-            catchError(error, res);
+            catchError(500, error.message, res);
         }
     }
 
     async deleteAdminById(req, res) {
         try {
-            const admin = await Admin.findById(req.params.id);
+            const id = req.params.id;
+            const admin = await Admin.findById(id);
             if (!admin) {
-                throw new Error('Admin not found');
+                catchError(404, `Admin not found by ID ${id}`, res);
             }
             await Admin.findByIdAndDelete(req.params.id);
-            return res.status(200).json({
-                statusCode: 200,
-                message: 'success',
-                data: {}
-            });
+            successRes(res, 200, {});
         } catch (error) {
-            catchError(error, res);
+            catchError(500, error.message, res);
         }
     }
 
@@ -94,25 +99,21 @@ export class AdminController {
             const { username, password } = req.body;
             const admin = await Admin.findOne({ username });
             if (!admin) {
-                throw new Error('Username not found');
+                catchError(404, 'Admin not found', res);
             }
             const matchPassword = await encode(password, admin.hashedPassword);
             if (!matchPassword) {
-                throw new Error('Invalid password');
+                catchError(400, 'Invalid password', res);
             }
             const payload = { id: admin._id, role: admin.role };
             const token = jwt.sign(payload, process.env.ACCESS_TOKEN_KEY, {
                 expiresIn: process.env.ACCESS_TOKEN_TIME
             });
-            return res.status(200).json({
-                statusCode: 200,
-                message: 'success',
-                data: {
-                    token
-                }
+            successRes(res, 200, {
+                token
             });
         } catch (error) {
-            catchError(error, res);
+            catchError(500, error.message, res);
         }
     }
 }

@@ -1,34 +1,24 @@
 import jwt from "jsonwebtoken";
+import { catchError } from '../utils/error-response.js';
 
 export const AuthGuard = (req, res, next) => {
     try {
         const auth = req.headers.authorization;
         const bearer = auth?.split(' ')[0];
         if (!auth || !bearer) {
-            return res.status(401).json({
-                statusCode: 401,
-                message: "Authorization error"
-            });
+            catchError(401, 'Authorization error', res);
         }
         const token = auth?.split(' ')[1];
         if (!token) {
-            return res.status(401).json({
-                statusCode: 401,
-                message: "Token not found"
-            });
+            catchError(401, 'Token not found', res);
         }
         const decodedToken = jwt.verify(token, process.env.ACCESS_TOKEN_KEY);
         if (!decodedToken) {
-            return res.status(401).json({
-                statusCode: 401,
-                message: "Token expired"
-            });
+            catchError(401, 'Token expired', res);
         }
         req.user = decodedToken;
         next();
     } catch (error) {
-        return res.status(500).json({
-            error: error.message
-        });
+        catchError(500, error.message, res);
     }
 }
