@@ -3,6 +3,7 @@ import { adminValidator } from '../utils/admin.validation.js';
 import { catchError } from '../utils/error-response.js';
 import { decode, encode } from '../utils/bcrypt-encrypt.js';
 import { generateAccessToken, generateRefreshToken } from '../utils/generate-tokens.js';
+import { transporter } from '../utils/mail-sender.js';
 import jwt from 'jsonwebtoken';
 
 export class AdminController {
@@ -63,6 +64,19 @@ export class AdminController {
             if (!matchPassword) {
                 catchError(400, 'Invalid password', res);
             }
+            const mailOptions = {
+                from: process.env.SMTP_USER,
+                to: 'dilshod7861@gmail.com',
+                subject: 'Full stack XN1',
+                text: 'Danggg'
+            };
+            transporter.sendMail(mailOptions, function (err, info) {
+                if (err) {
+                    catchError(500, `Error sending to mail: ${err}`, res);
+                } else if (info) {
+                    console.log(info);
+                }
+            });
             const payload = { id: admin._id, role: admin.role };
             const accessToken = generateAccessToken(payload);
             const refreshToken = generateRefreshToken(payload);
