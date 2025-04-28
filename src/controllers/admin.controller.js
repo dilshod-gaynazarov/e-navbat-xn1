@@ -7,6 +7,7 @@ import { transporter } from '../utils/mail-sender.js';
 import jwt from 'jsonwebtoken';
 import { generateOTP } from '../utils/otp-generator.js';
 import { setCache, getCache } from '../utils/cache.js';
+import { writeToCookie } from '../utils/cookie.js';
 
 export class AdminController {
     async createSuperAdmin(req, res) {
@@ -98,17 +99,13 @@ export class AdminController {
                 return catchError(404, 'Username not found', res);
             }
             const otpCache = getCache(username);
-            if (!otpCache || otp != otpCache){
+            if (!otpCache || otp != otpCache) {
                 return catchError(400, 'OTP expired', res);
             }
             const payload = { id: admin._id, role: admin.role };
             const accessToken = generateAccessToken(payload);
             const refreshToken = generateRefreshToken(payload);
-            res.cookie('refreshToken', refreshToken, {
-                httpOnly: true,
-                secure: true,
-                maxAge: 30 * 24 * 60 * 60 * 1000
-            });
+            writeToCookie(res, 'refreshTokenAdmin', refreshToken);
             return res.status(200).json({
                 statusCode: 200,
                 message: 'success',
@@ -121,7 +118,7 @@ export class AdminController {
 
     async getAccessToken(req, res) {
         try {
-            const refreshToken = req.cookies.refreshToken;
+            const refreshToken = req.cookies.refreshTokenAdmin;
             if (!refreshToken) {
                 return catchError(401, 'Refresh token not found', res);
             }
@@ -143,7 +140,7 @@ export class AdminController {
 
     async signoutAdmin(req, res) {
         try {
-            const refreshToken = req.cookies.refreshToken;
+            const refreshToken = req.cookies.refreshTokenAdmin;
             if (!refreshToken) {
                 return catchError(401, 'Refresh token not found', res);
             }
@@ -151,7 +148,7 @@ export class AdminController {
             if (!decodedData) {
                 return catchError(401, 'Refresh token expire', res);
             }
-            res.clearCookie('refreshToken');
+            res.clearCookie('refreshTokenAdmin');
             return res.status(200).json({
                 statusCode: 200,
                 message: 'success',
