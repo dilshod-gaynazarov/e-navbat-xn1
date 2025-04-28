@@ -11,6 +11,7 @@ router
     .post('/superadmin', controller.createSuperAdmin)
     .post('/', AuthGuard, SuperAdminGuard, controller.createAdmin)
     .post('/signin', controller.signinAdmin)
+    .post('/confirm-signin', controller.confirmSigninAdmin)
     .post('/token', controller.getAccessToken)
     .post('/signout', AuthGuard, controller.signoutAdmin)
     .get('/', AuthGuard, SuperAdminGuard, controller.getAllAdmins)

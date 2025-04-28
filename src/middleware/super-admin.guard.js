@@ -4,10 +4,10 @@ export const SuperAdminGuard = (req, res, next) => {
     try {
         const user = req?.user;
         if (user?.role !== 'superadmin') {
-            catchError(401, 'Forbidden user', res);
+            return catchError(401, 'Forbidden user', res);
         }
         next();
     } catch (error) {
-        catchError(500, error.message, res);
+        return catchError(500, error.message, res);
     }
 }

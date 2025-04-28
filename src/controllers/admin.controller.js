@@ -1,21 +1,23 @@
 import Admin from '../models/admin.model.js';
-import { adminValidator } from '../utils/admin.validation.js';
+import { adminValidator } from '../validation/admin.validation.js';
 import { catchError } from '../utils/error-response.js';
 import { decode, encode } from '../utils/bcrypt-encrypt.js';
 import { generateAccessToken, generateRefreshToken } from '../utils/generate-tokens.js';
 import { transporter } from '../utils/mail-sender.js';
 import jwt from 'jsonwebtoken';
+import { generateOTP } from '../utils/otp-generator.js';
+import { setCache, getCache } from '../utils/cache.js';
 
 export class AdminController {
     async createSuperAdmin(req, res) {
         try {
             const checkSuperAdmin = await Admin.findOne({ role: 'superadmin' });
             if (checkSuperAdmin) {
-                catchError(409, 'Super admin already exist', res);
+                return catchError(409, 'Super admin already exist', res);
             };
             const { error, value } = adminValidator(req.body);
             if (error) {
-                catchError(406, error, res);
+                return catchError(406, error, res);
             }
             const { username, password } = value;
             const hashedPassword = await decode(password, 7);
@@ -28,7 +30,7 @@ export class AdminController {
                 data: superadmin
             });
         } catch (error) {
-            catchError(500, error.message, res);
+            return catchError(500, error.message, res);
         }
     }
 
@@ -36,7 +38,7 @@ export class AdminController {
         try {
             const { error, value } = adminValidator(req.body);
             if (error) {
-                catchError(406, error, res);
+                return catchError(406, error, res);
             }
             const { username, password } = value;
             const hashedPassword = await decode(password, 7);
@@ -49,7 +51,7 @@ export class AdminController {
                 data: admin
             });
         } catch (error) {
-            catchError(500, error.message, res);
+            return catchError(500, error.message, res);
         }
     }
 
@@ -58,25 +60,47 @@ export class AdminController {
             const { username, password } = req.body;
             const admin = await Admin.findOne({ username });
             if (!admin) {
-                catchError(404, 'Admin not found', res);
+                return (404, 'Admin not found', res);
             }
             const matchPassword = await encode(password, admin.hashedPassword);
             if (!matchPassword) {
-                catchError(400, 'Invalid password', res);
+                return catchError(400, 'Invalid password', res);
             }
+            const otp = generateOTP();
             const mailOptions = {
                 from: process.env.SMTP_USER,
                 to: 'dilshod7861@gmail.com',
-                subject: 'Full stack XN1',
-                text: 'Danggg'
+                subject: 'e-navbat',
+                text: otp
             };
             transporter.sendMail(mailOptions, function (err, info) {
                 if (err) {
-                    catchError(500, `Error sending to mail: ${err}`, res);
+                    return catchError(500, `Error sending to mail: ${err}`, res);
                 } else if (info) {
-                    console.log(info);
+                    setCache(admin.username, otp);
                 }
             });
+            return res.status(200).json({
+                statusCode: 200,
+                message: 'success',
+                data: {}
+            });
+        } catch (error) {
+            return catchError(500, error.message, res);
+        }
+    }
+
+    async confirmSigninAdmin(req, res) {
+        try {
+            const { username, otp } = req.body;
+            const admin = await Admin.findOne({ username });
+            if (!admin) {
+                return catchError(404, 'Username not found', res);
+            }
+            const otpCache = getCache(username);
+            if (!otpCache || otp != otpCache){
+                return catchError(400, 'OTP expired', res);
+            }
             const payload = { id: admin._id, role: admin.role };
             const accessToken = generateAccessToken(payload);
             const refreshToken = generateRefreshToken(payload);
@@ -89,9 +113,9 @@ export class AdminController {
                 statusCode: 200,
                 message: 'success',
                 data: accessToken
-            });
+            })
         } catch (error) {
-            catchError(500, error.message, res);
+            return catchError(500, error.message, res);
         }
     }
 
@@ -99,11 +123,11 @@ export class AdminController {
         try {
             const refreshToken = req.cookies.refreshToken;
             if (!refreshToken) {
-                catchError(401, 'Refresh token not found', res);
+                return catchError(401, 'Refresh token not found', res);
             }
             const decodedData = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_KEY);
             if (!decodedData) {
-                catchError(401, 'Refresh token expire', res);
+                return catchError(401, 'Refresh token expire', res);
             }
             const payload = { id: decodedData.id, role: decodedData.role };
             const accessToken = generateAccessToken(payload);
@@ -113,7 +137,7 @@ export class AdminController {
                 data: accessToken
             });
         } catch (error) {
-            catchError(500, error.message, res);
+            return catchError(500, error.message, res);
         }
     }
 
@@ -121,11 +145,11 @@ export class AdminController {
         try {
             const refreshToken = req.cookies.refreshToken;
             if (!refreshToken) {
-                catchError(401, 'Refresh token not found', res);
+                return catchError(401, 'Refresh token not found', res);
             }
             const decodedData = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_KEY);
             if (!decodedData) {
-                catchError(401, 'Refresh token expire', res);
+                return catchError(401, 'Refresh token expire', res);
             }
             res.clearCookie('refreshToken');
             return res.status(200).json({
@@ -134,7 +158,7 @@ export class AdminController {
                 data: {}
             });
         } catch (error) {
-            catchError(500, error.message, res);
+            return catchError(500, error.message, res);
         }
     }
 
@@ -147,7 +171,7 @@ export class AdminController {
                 data: admins
             });
         } catch (error) {
-            catchError(500, error.message, res);
+            return catchError(500, error.message, res);
         }
     }
 
@@ -160,7 +184,7 @@ export class AdminController {
                 data: admin
             });
         } catch (error) {
-            catchError(500, error.message, res);
+            return catchError(500, error.message, res);
         }
     }
 
@@ -174,7 +198,7 @@ export class AdminController {
                 data: updatedAdmin
             });
         } catch (error) {
-            catchError(500, error.message, res);
+            return catchError(500, error.message, res);
         }
     }
 
@@ -182,7 +206,7 @@ export class AdminController {
         try {
             const admin = await AdminController.findAdminById(req.params.id);
             if (admin.role === 'superadmin') {
-                catchError(400, 'Danggg\nSuper admin cannot be delete', res);
+                return catchError(400, 'Danggg\nSuper admin cannot be delete', res);
             }
             await Admin.findByIdAndDelete(req.params.id);
             return res.status(200).json({
@@ -191,7 +215,7 @@ export class AdminController {
                 data: {}
             });
         } catch (error) {
-            catchError(500, error.message, res);
+            return catchError(500, error.message, res);
         }
     }
 
@@ -199,11 +223,11 @@ export class AdminController {
         try {
             const admin = await Admin.findById(id);
             if (!admin) {
-                catchError(404, `Admin not found by ID ${id}`, res);
+                return catchError(404, `Admin not found by ID ${id}`, res);
             }
             return admin;
         } catch (error) {
-            catchError(500, error.message, res);
+            return catchError(500, error.message, res);
         }
     }
 }
