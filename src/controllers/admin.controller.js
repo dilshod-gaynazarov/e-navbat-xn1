@@ -191,7 +191,7 @@ export class AdminController {
 
   async getAdminById(req, res) {
     try {
-      const admin = await AdminController.findAdminById(req.params.id);
+      const admin = await AdminController.findAdminById(req.params.id, res);
       return res.status(200).json({
         statusCode: 200,
         message: 'success',
@@ -204,7 +204,8 @@ export class AdminController {
 
   async updateAdminById(req, res) {
     try {
-      await AdminController.findAdminById(req.params.id);
+      const id = req.params.id;
+      await AdminController.findAdminById(id, res);
       const updatedAdmin = await Admin.findByIdAndUpdate(id, req.body, {
         new: true,
       });
@@ -220,11 +221,12 @@ export class AdminController {
 
   async deleteAdminById(req, res) {
     try {
-      const admin = await AdminController.findAdminById(req.params.id);
+      const id = req.params.id;
+      const admin = await AdminController.findAdminById(id, res);
       if (admin.role === 'superadmin') {
         return catchError(400, 'Danggg\nSuper admin cannot be delete', res);
       }
-      await Admin.findByIdAndDelete(req.params.id);
+      await Admin.findByIdAndDelete(id);
       return res.status(200).json({
         statusCode: 200,
         message: 'success',
@@ -235,7 +237,7 @@ export class AdminController {
     }
   }
 
-  static async findAdminById(id) {
+  static async findAdminById(id, res) {
     try {
       const admin = await Admin.findById(id);
       if (!admin) {

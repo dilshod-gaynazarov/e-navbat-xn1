@@ -4,6 +4,7 @@ import { connectDB } from './db/index.js';
 import cookieParser from 'cookie-parser';
 import adminRouter from './routes/admin.routes.js';
 import doctorRouter from './routes/doctor.routes.js';
+import graphRouter from './routes/graph.routes.js';
 import logger from './utils/logger/logger.js';
 config();
 
@@ -28,6 +29,7 @@ logger.info('Server started');
 
 app.use('/admin', adminRouter);
 app.use('/doctor', doctorRouter);
+app.use('/graph', graphRouter);
 
 app.use((err, req, res, next) => {
   if (err) {

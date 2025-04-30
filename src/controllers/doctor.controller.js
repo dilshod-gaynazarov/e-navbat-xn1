@@ -125,4 +125,73 @@ export class DoctorController {
       return catchError(500, error.message, res);
     }
   }
+
+  async getAllDoctors(_, res) {
+    try {
+      const doctors = await Doctor.find();
+      return res.status(200).json({
+        statusCode: 200,
+        message: 'success',
+        data: doctors,
+      });
+    } catch (error) {
+      return catchError(500, error.message, res);
+    }
+  }
+
+  async getDoctorById(req, res) {
+    try {
+      const doctor = await DoctorController.findDoctorById(req.params.id, res);
+      return res.status(200).json({
+        statusCode: 200,
+        message: 'success',
+        data: doctor,
+      });
+    } catch (error) {
+      return catchError(500, error.message, res);
+    }
+  }
+
+  async updateDoctorById(req, res) {
+    try {
+      const id = req.params.id;
+      await DoctorController.findDoctorById(id);
+      const updatedDoctor = await Doctor.findByIdAndUpdate(id, req.body, {
+        new: true,
+      });
+      return res.status(200).json({
+        statusCode: 200,
+        message: 'success',
+        data: updatedDoctor,
+      });
+    } catch (error) {
+      return catchError(500, error.message, res);
+    }
+  }
+
+  async deleteDoctorById(req, res) {
+    try {
+      const id = req.params.id;
+      await Doctor.findByIdAndDelete(id);
+      return res.status(200).json({
+        statusCode: 200,
+        message: 'success',
+        data: {},
+      });
+    } catch (error) {
+      return catchError(500, error.message, res);
+    }
+  }
+
+  static async findDoctorById(id, res) {
+    try {
+      const doctor = await Doctor.findById(id);
+      if (!doctor) {
+        return catchError(404, `Doctor not found by ID ${id}`, res);
+      }
+      return doctor;
+    } catch (error) {
+      return catchError(500, error.message, res);
+    }
+  }
 }
