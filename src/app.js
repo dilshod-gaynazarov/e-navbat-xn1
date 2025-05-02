@@ -6,6 +6,8 @@ import adminRouter from './routes/admin.routes.js';
 import doctorRouter from './routes/doctor.routes.js';
 import graphRouter from './routes/graph.routes.js';
 import logger from './utils/logger/logger.js';
+import { fileURLToPath } from 'url';
+import path from 'path';
 config();
 
 process.on('uncaughtException', (err) => {
@@ -19,13 +21,17 @@ process.on('unhandledRejection', (reasion, promise) => {
 
 const PORT = +process.env.PORT;
 const app = express();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 app.use(express.json());
 app.use(cookieParser());
 
-await connectDB();
+app.set('view engine', 'ejs');
+app.set('views', path.join(__dirname, 'views'));
+app.use(express.urlencoded({ extended: true }));
 
-logger.info('Server started');
+await connectDB();
 
 app.use('/admin', adminRouter);
 app.use('/doctor', doctorRouter);
@@ -41,4 +47,4 @@ app.use((err, req, res, next) => {
   }
 });
 
-app.listen(PORT, () => console.log('Server running on port', PORT));
+app.listen(PORT, logger.info(`Server running on port ${PORT}`));

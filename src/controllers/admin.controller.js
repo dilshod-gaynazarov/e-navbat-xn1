@@ -68,7 +68,6 @@ export class AdminController {
 
   async signinAdmin(req, res) {
     try {
-      logger.info(`Kimdur saytga kirishga urinyabdi: ${req.ip}`);
       const { username, password } = req.body;
       const admin = await Admin.findOne({ username });
       if (!admin) {
@@ -92,11 +91,7 @@ export class AdminController {
           setCache(admin.username, otp);
         }
       });
-      return res.status(200).json({
-        statusCode: 200,
-        message: 'success',
-        data: {},
-      });
+      return res.redirect(`/admin/confirm/${admin.username}`);
     } catch (error) {
       return catchError(500, error.message, res);
     }
