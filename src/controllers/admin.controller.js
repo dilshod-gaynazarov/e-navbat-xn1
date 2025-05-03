@@ -80,7 +80,7 @@ export class AdminController {
       const otp = generateOTP();
       const mailOptions = {
         from: process.env.SMTP_USER,
-        to: 'dilshod7861@gmail.com',
+        to: process.env.SMTP_USER,
         subject: 'e-navbat',
         text: otp,
       };
@@ -91,7 +91,11 @@ export class AdminController {
           setCache(admin.username, otp);
         }
       });
-      return res.redirect(`/admin/confirm/${admin.username}`);
+      return res.status(200).json({
+        statusCode: 200,
+        message: 'success',
+        data: {},
+      });
     } catch (error) {
       return catchError(500, error.message, res);
     }

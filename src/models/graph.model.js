@@ -4,7 +4,7 @@ const graphSchema = new Schema(
   {
     date: { type: Date },
     time: { type: String },
-    status: { type: String, enum: ['busy', 'empty'], default: 'empty' },
+    status: { type: String, enum: ['busy', 'free'], default: 'free' },
     doctorId: { type: Schema.Types.ObjectId, ref: 'Doctor' },
   },
   { timestamps: true }

@@ -8,10 +8,6 @@ const router = Router();
 const controller = new AdminController();
 
 router
-  .get('/signin', (_, res) => res.render('signin'))
-  .get('/confirm/:username', (req, res) => {
-    res.render('otp', { username: req.params.username });
-  })
   .post('/superadmin', controller.createSuperAdmin)
   .post('/', AuthGuard, SuperAdminGuard, controller.createAdmin)
   .post('/signin', controller.signinAdmin)

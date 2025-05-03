@@ -6,8 +6,6 @@ import adminRouter from './routes/admin.routes.js';
 import doctorRouter from './routes/doctor.routes.js';
 import graphRouter from './routes/graph.routes.js';
 import logger from './utils/logger/logger.js';
-import { fileURLToPath } from 'url';
-import path from 'path';
 config();
 
 process.on('uncaughtException', (err) => {
@@ -21,15 +19,9 @@ process.on('unhandledRejection', (reasion, promise) => {
 
 const PORT = +process.env.PORT;
 const app = express();
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 app.use(express.json());
 app.use(cookieParser());
-
-app.set('view engine', 'ejs');
-app.set('views', path.join(__dirname, 'views'));
-app.use(express.urlencoded({ extended: true }));
 
 await connectDB();
 
@@ -43,7 +35,7 @@ app.use((err, req, res, next) => {
       .status(500)
       .json({ message: 'Internal server error', error: err });
   } else {
-    next();
+    return next();
   }
 });
 

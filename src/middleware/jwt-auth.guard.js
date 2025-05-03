@@ -17,7 +17,7 @@ export const AuthGuard = (req, res, next) => {
       return catchError(401, 'Token expired', res);
     }
     req.user = decodedToken;
-    next();
+    return next();
   } catch (error) {
     return catchError(500, error.message, res);
   }

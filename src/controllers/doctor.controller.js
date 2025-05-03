@@ -128,7 +128,7 @@ export class DoctorController {
 
   async getAllDoctors(_, res) {
     try {
-      const doctors = await Doctor.find();
+      const doctors = await Doctor.find().populate('graphs');
       return res.status(200).json({
         statusCode: 200,
         message: 'success',
@@ -172,6 +172,7 @@ export class DoctorController {
   async deleteDoctorById(req, res) {
     try {
       const id = req.params.id;
+      await DoctorController.findDoctorById(id, res);
       await Doctor.findByIdAndDelete(id);
       return res.status(200).json({
         statusCode: 200,
@@ -185,7 +186,7 @@ export class DoctorController {
 
   static async findDoctorById(id, res) {
     try {
-      const doctor = await Doctor.findById(id);
+      const doctor = await Doctor.findById(id).populate('graphs');
       if (!doctor) {
         return catchError(404, `Doctor not found by ID ${id}`, res);
       }
