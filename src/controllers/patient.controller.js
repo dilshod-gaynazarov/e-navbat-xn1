@@ -1,72 +1,60 @@
-import Doctor from '../models/doctor.model.js';
+import Patient from '../models/patient.model.js';
 import { catchError } from '../utils/error-response.js';
-import { doctorValidator } from '../validation/doctor.validation.js';
-import { generateOTP } from '../utils/otp-generator.js';
-import { setCache, getCache } from '../utils/cache.js';
+import { patientValidator } from '../validation/patient.validation.js';
+import { decode, encode } from '../utils/bcrypt-encrypt.js';
 import {
   generateAccessToken,
   generateRefreshToken,
 } from '../utils/generate-tokens.js';
 import { writeToCookie } from '../utils/cookie.js';
 
-export class DoctorController {
-  async createDoctor(req, res) {
+export class PatientController {
+  async signupPatient(req, res) {
     try {
-      const { error, value } = doctorValidator(req.body);
+      const { error, value } = patientValidator(req.body);
       if (error) {
         return catchError(400, error, res);
       }
-      const existPhone = await Doctor.findOne({
-        phoneNumber: value.phoneNumber,
-      });
+      const { phoneNumber, fullName, password, address, age, gender } = value;
+      const existPhone = await Patient.findOne({ phoneNumber });
       if (existPhone) {
         return catchError(409, 'Phone number already exist', res);
       }
-      const doctor = await Doctor.create(value);
+      const hashedPassword = await decode(password, 7);
+      const patient = await Patient.create({
+        phoneNumber,
+        fullName,
+        hashedPassword,
+        address,
+        age,
+        gender,
+      });
+      const payload = { id: patient._id, is_patient: true };
+      const accessToken = generateAccessToken(payload);
+      const refreshToken = generateRefreshToken(payload);
+      writeToCookie(res, 'refreshTokenPatient', refreshToken);
       return res.status(201).json({
         statusCode: 201,
         message: 'success',
-        data: doctor,
+        data: accessToken,
       });
     } catch (error) {
       return catchError(500, error.message, res);
     }
   }
 
-  async signinDoctor(req, res) {
+  async signinPatient(req, res) {
     try {
-      const { phoneNumber } = req.body;
-      const doctor = await Doctor.findOne({ phoneNumber });
-      if (!doctor) {
-        return catchError(404, 'Doctor not found', res);
+      const { phoneNumber, password } = req.body;
+      const patient = await Patient.findOne({ phoneNumber });
+      const isMatchPass = await encode(password, patient?.hashedPassword);
+      if (!patient || !isMatchPass) {
+        return catchError(404, 'Phone number or password incorrect', res);
       }
-      const otp = generateOTP();
-      setCache(phoneNumber, otp);
-      return res.status(200).json({
-        statusCode: 200,
-        message: 'success',
-        data: otp,
-      });
-    } catch (error) {
-      return catchError(500, error.message, res);
-    }
-  }
-
-  async confirmSigninDoctor(req, res) {
-    try {
-      const { phoneNumber, otp } = req.body;
-      const doctor = await Doctor.findOne({ phoneNumber });
-      if (!doctor) {
-        return catchError(400, 'Wrong phone number', res);
-      }
-      const otpCache = getCache(phoneNumber);
-      if (!otpCache || otpCache != otp) {
-        return catchError(400, 'OTP expired', res);
-      }
-      const payload = { id: doctor._id, is_doctor: true };
+      const payload = { id: patient._id, is_patient: true };
       const accessToken = generateAccessToken(payload);
       const refreshToken = generateRefreshToken(payload);
-      writeToCookie(res, 'refreshTokenDoctor', refreshToken);
+      writeToCookie(res, 'refreshTokenPatient', refreshToken);
       return res.status(200).json({
         statusCode: 200,
         message: 'success',
@@ -77,9 +65,9 @@ export class DoctorController {
     }
   }
 
-  async getAccessTokenDoctor(req, res) {
+  async getAccessTokenPatient(req, res) {
     try {
-      const refreshToken = req.cookies.refreshTokenDoctor;
+      const refreshToken = req.cookies.refreshTokenPatient;
       if (!refreshToken) {
         return catchError(401, 'Refresh token not found', res);
       }
@@ -90,7 +78,7 @@ export class DoctorController {
       if (!decodedData) {
         return catchError(401, 'Refresh token expire', res);
       }
-      const payload = { id: decodedData.id, is_doctor: true };
+      const payload = { id: decodedData.id, is_patient: true };
       const accessToken = generateAccessToken(payload);
       return res.status(200).json({
         statusCode: 200,
@@ -102,9 +90,9 @@ export class DoctorController {
     }
   }
 
-  async signoutDoctor(req, res) {
+  async signoutPatient(req, res) {
     try {
-      const refreshToken = req.cookies.refreshTokenDoctor;
+      const refreshToken = req.cookies.refreshTokenPatient;
       if (!refreshToken) {
         return catchError(401, 'Refresh token not found', res);
       }
@@ -115,7 +103,7 @@ export class DoctorController {
       if (!decodedData) {
         return catchError(401, 'Refresh token expire', res);
       }
-      res.clearCookie('refreshTokenDoctor');
+      res.clearCookie('refreshTokenPatient');
       return res.status(200).json({
         statusCode: 200,
         message: 'success',
@@ -126,54 +114,57 @@ export class DoctorController {
     }
   }
 
-  async getAllDoctors(_, res) {
+  async getAllPatients(_, res) {
     try {
-      const doctors = await Doctor.find().populate('graphs');
+      const patients = await Patient.find();
       return res.status(200).json({
         statusCode: 200,
         message: 'success',
-        data: doctors,
+        data: patients,
       });
     } catch (error) {
       return catchError(500, error.message, res);
     }
   }
 
-  async getDoctorById(req, res) {
+  async getPatientById(req, res) {
     try {
-      const doctor = await DoctorController.findDoctorById(req.params.id, res);
+      const patient = await PatientController.findPatientById(
+        req.params.id,
+        res
+      );
       return res.status(200).json({
         statusCode: 200,
         message: 'success',
-        data: doctor,
+        data: patient,
       });
     } catch (error) {
       return catchError(500, error.message, res);
     }
   }
 
-  async updateDoctorById(req, res) {
+  async updatePatientById(req, res) {
     try {
       const id = req.params.id;
-      await DoctorController.findDoctorById(id);
-      const updatedDoctor = await Doctor.findByIdAndUpdate(id, req.body, {
+      await PatientController.findPatientById(id, res);
+      const updatedPatient = await Patient.findByIdAndUpdate(id, req.body, {
         new: true,
       });
       return res.status(200).json({
         statusCode: 200,
         message: 'success',
-        data: updatedDoctor,
+        data: updatedPatient,
       });
     } catch (error) {
       return catchError(500, error.message, res);
     }
   }
 
-  async deleteDoctorById(req, res) {
+  async deletePatientById(req, res) {
     try {
       const id = req.params.id;
-      await DoctorController.findDoctorById(id, res);
-      await Doctor.findByIdAndDelete(id);
+      await PatientController.findPatientById(id, res);
+      await Patient.findByIdAndDelete(id);
       return res.status(200).json({
         statusCode: 200,
         message: 'success',
@@ -184,13 +175,13 @@ export class DoctorController {
     }
   }
 
-  static async findDoctorById(id, res) {
+  static async findPatientById(id, res) {
     try {
-      const doctor = await Doctor.findById(id).populate('graphs');
-      if (!doctor) {
-        return catchError(404, `Doctor not found by ID ${id}`, res);
+      const patient = await Patient.findById(id);
+      if (!patient) {
+        return catchError(404, 'Patient not found', res);
       }
-      return doctor;
+      return patient;
     } catch (error) {
       return catchError(500, error.message, res);
     }
