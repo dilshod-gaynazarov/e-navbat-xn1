@@ -6,6 +6,7 @@ import adminRouter from './routes/admin.routes.js';
 import doctorRouter from './routes/doctor.routes.js';
 import graphRouter from './routes/graph.routes.js';
 import patientRouter from './routes/patient.routes.js';
+import appointmentRouter from './routes/appointment.routes.js';
 import logger from './utils/logger/logger.js';
 config();
 
@@ -30,6 +31,7 @@ app.use('/admin', adminRouter);
 app.use('/doctor', doctorRouter);
 app.use('/graph', graphRouter);
 app.use('/patient', patientRouter);
+app.use('/appointment', appointmentRouter);
 
 app.use((err, req, res, next) => {
   if (err) {

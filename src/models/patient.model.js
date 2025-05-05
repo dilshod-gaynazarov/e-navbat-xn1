@@ -9,8 +9,14 @@ const patientSchema = new Schema(
     age: { type: Number },
     gender: { type: String, enum: ['male', 'female'] },
   },
-  { timestamps: true }
+  { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );
+
+patientSchema.virtual('appointments', {
+  ref: 'Appointment',
+  localField: '_id',
+  foreignField: 'patientId',
+});
 
 const Patient = model('Patient', patientSchema);
 export default Patient;

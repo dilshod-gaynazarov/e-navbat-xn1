@@ -116,7 +116,7 @@ export class PatientController {
 
   async getAllPatients(_, res) {
     try {
-      const patients = await Patient.find();
+      const patients = await Patient.find().populate('appointments');
       return res.status(200).json({
         statusCode: 200,
         message: 'success',
@@ -177,7 +177,7 @@ export class PatientController {
 
   static async findPatientById(id, res) {
     try {
-      const patient = await Patient.findById(id);
+      const patient = await Patient.findById(id).populate('appointments');
       if (!patient) {
         return catchError(404, 'Patient not found', res);
       }
